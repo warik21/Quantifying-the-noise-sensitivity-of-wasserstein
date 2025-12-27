@@ -95,12 +95,15 @@ def measure_noise_effects_on_image_pair(
         'noise_std': noise_std,
         'original_W1': base_distances['w1_distance'],
         'original_W2': base_distances['w2_distance'],
+        'original_W3': base_distances['w3_distance'],
         'original_L2': base_distances['l2_distance'],
         'noisy_vs_noisy_W1': np.mean([d['w1_distance'] for d in noisy_distances]),
         'noisy_vs_noisy_W2': np.mean([d['w2_distance'] for d in noisy_distances]),
+        'noisy_vs_noisy_W3': np.mean([d['w3_distance'] for d in noisy_distances]),
         'noisy_vs_noisy_L2': np.mean([d['l2_distance'] for d in noisy_distances]),
         'W1_ratio': (np.mean([d['w1_distance'] for d in noisy_distances])) / base_distances['w1_distance'],
         'W2_ratio': (np.mean([d['w2_distance'] for d in noisy_distances])) / base_distances['w2_distance'],
+        'W3_ratio': (np.mean([d['w3_distance'] for d in noisy_distances])) / base_distances['w3_distance'],
         'L2_ratio': (np.mean([d['l2_distance'] for d in noisy_distances])) / base_distances['l2_distance'],
         'resolution': img1.shape[0]
     }
@@ -129,6 +132,7 @@ def calculate_wasserstein_l2_distances(image1: np.ndarray,
     return {
         "w1_distance": calculate_w_p_distances(flat1, flat2, 1, cost_base),
         "w2_distance": calculate_w_p_distances(flat1, flat2, 2, cost_base),
+        "w3_distance": calculate_w_p_distances(flat1, flat2, 3, cost_base),
         "l2_distance": l2_dist,
     }
 

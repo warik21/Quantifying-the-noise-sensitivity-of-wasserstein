@@ -20,13 +20,22 @@ images = [read_dotmark_image(category, resolution_og, i) for i in range(1, len(i
 images_curr = downscale_grayscale_images(images, resolution)
 cost_matrix = calculate_costs((resolution, resolution), metric='euclidean', cyclic=True)
 
+# images_curr = [np.ones(images_curr[0].shape)]
+# images_curr[0] /= images_curr[0].sum()
+
+# images_curr = [np.zeros(images_curr[0].shape)]
+# images_curr[0][8, 8] = 1
+# images_curr[0] /= images_curr[0].sum()
+
 run_single_image_full_experiment(
     images_list=images_curr,
     exp_name=f"CryoEM_torus_lean_single_image_{resolution}_torus_lean",
+    # exp_name=f"Uniform_Image_{resolution}_torus",
+    # exp_name=f"Single_pixel_with_mass_{resolution}_torus",
     cost_matrix=cost_matrix,
     noise_std_values=noise_values,
     num_exp=num_exp,
     n_parallel=n_parallel,
     results_dir=results_dir,
-    force_eval=True
+    force_eval=False
 )

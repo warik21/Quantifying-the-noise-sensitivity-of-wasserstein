@@ -79,7 +79,7 @@ def fit_all_distances(df) -> dict:
 
 def plot_fitted_curves(results_df, fits, prefix, save):
     """
-    Plots the original distance metrics along with their power-law fits.
+    Plots the original distance metrics along with their power-law fits in 3 side-by-side subplots.
 
     Parameters:
         results_df (DataFrame): Data containing noise variance and distances.
@@ -87,55 +87,72 @@ def plot_fitted_curves(results_df, fits, prefix, save):
         save (bool): Whether to save the plots.
         prefix (str): Prefix for the saved plot filenames.
     """
-    plt.figure(figsize=(10, 4))
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4), sharey=True)
 
-    colors = {"W1_distance_avg": "#b1182b", "W2_distance_avg": "#2065ab", "L2_distance_avg": "sandybrown",}
+    colors = {"W1_distance_avg": "#d0747f", "W2_distance_avg": "#2065ab", "L2_distance_avg": "sandybrown",}
     markers = {"W1_distance_avg": "o", "W2_distance_avg": "s", "L2_distance_avg": "^",}
 
-    metrics_to_plot = ["W1_distance_avg", "W2_distance_avg", "L2_distance_avg",]
+    metrics_to_plot = ["L2_distance_avg", "W1_distance_avg", "W2_distance_avg"]
+    
+    x_original = results_df["noise_std"]
+    res = results_df['resolution'].iloc[0]
 
-    for metric in metrics_to_plot:
+    for idx, metric in enumerate(metrics_to_plot):
+        ax = axes[idx]
+        
         if metric not in fits:
             print(f"No fitted parameters for {metric}.")
             continue
 
-        x_original = results_df["noise_std"]
-        res = results_df['resolution'].iloc[0]
         y_original = results_df[metric]
 
         # Plot original data
-        plt.plot(x_original, y_original, markersize=4, color=colors[metric], marker=markers[metric], linestyle='None')
-        if metric.startswith("W") and metric != "W1_distance_avg":
-            # print(metric)
+        ax.plot(x_original, y_original, markersize=4, color=colors[metric], 
+                marker=markers[metric], linestyle='None', label='Distance')
+        
+        # Get fit parameters and plot fit
+        if metric.startswith("W"):
             a, b = fits[metric+'_fixed']
-            # Plot the theoretical bound as a dashed line
-            p = int(metric[1:2])
-            if p == 1:
-                p = 100
-            const1 = (4 * res) / math.sqrt(math.pi)
-            plt.plot(x_original, ((const1 * x_original) ** (1/p)),
-                     color=colors[metric], linestyle='--', linewidth=2)
-        elif metric.startswith("W") and metric == "W1_distance_avg":
-            a, b = fits[metric+'_fixed']
-            const = 2 * res * math.log2(res) + (res / (2 * math.sqrt(math.pi)))
-            plt.plot(x_original, const * x_original,
-                     color=colors[metric], linestyle='--', linewidth=2)
-
         else:
             a, b = fits[metric]
+            
         if metric != "W2_distance_avg":
-            label_fit = fr"{metric.replace('_distance_avg', '')} = $ {a:.3f}\;\sigma$"
+            label_fit = fr"Fit: $ {a:.3f}\;\sigma$"
         else:
-            label_fit = f"{metric.replace('_distance_avg', '')} = $ {a:.3f}\;\\sqrt{{\\sigma}}$"
-        plt.plot(x_original, a * x_original ** b, label=label_fit, color=colors[metric], linewidth=2)
+            label_fit = f"Fit: $ {a:.3f}\;\\sqrt{{\\sigma}}$"
+        ax.plot(x_original, a * x_original ** b, label=label_fit, 
+                color=colors[metric], linewidth=2)
+        
+        # Plot theoretical bounds for Wasserstein metrics
+        if metric == "W1_distance_avg":
+            const = 2 * res * math.log2(res) + (res / (2 * math.sqrt(math.pi)))
+            # const = 4 * res / math.sqrt(math.pi)
+            ax.plot(x_original, const * x_original,
+                    color=colors[metric], linestyle='--', linewidth=2, 
+                    # label=f'$\\frac{{2}}{{\\sqrt{{\\pi}}}} * n * log_2(n) * \\sigma + \\frac{{1}}{{2 * \\sqrt{{\\pi}}}} * n * \\sigma$')
+                    label='Theoretical bound')
+            const_lower = res / math.sqrt(2 * math.pi)
+            ax.plot(x_original, const_lower * x_original,
+                    color=colors[metric], linestyle='--', linewidth=2)
+        elif metric == "W2_distance_avg":
+            const1 = (4 * res) / math.sqrt(math.pi)
+            p = 2
+            ax.plot(x_original, ((const1 * x_original) ** (1/p)),
+                    color=colors[metric], linestyle='--', linewidth=2,
+                    #label=f'$\\frac{{4}}{{\\sqrt{{\\pi}}}} * n * \\sigma$'
+                    label='Theoretical bound'
+                    )
 
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.xlabel("$\\sigma$", fontsize=12)
-    plt.ylabel("$d\\,(\\mu+\\epsilon, \\mu)$", fontsize=12)
-    plt.legend(fontsize=12, loc="best")
-    plt.xlim(min(results_df["noise_std"]), max(results_df["noise_std"]))
-    plt.grid()
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlabel("$\\sigma$", fontsize=12)
+        ax.set_title(metric.replace('_distance_avg', ''), fontsize=14)
+        ax.set_xlim(min(x_original), max(x_original))
+        ax.grid()
+        ax.legend(fontsize=10, loc="best")
+
+    axes[0].set_ylabel("$d\\,(\\mu+\\epsilon, \\mu)$", fontsize=12)
+    
     plt.tight_layout()
 
     if save:
@@ -189,19 +206,19 @@ def plot_distance_differences(df, file_prefix, save_fig=True):
 
     plt.plot(df['noise_std'], df['noisy_vs_noisy_W1'],
              label='$W_1(\\mu_\\sigma, \\nu_\\sigma)$',
-             color='#b1182b')
+             color='#b1182b', linewidth=2)
     plt.plot(df['noise_std'],  df['original_W1'] + (math.sqrt(1/2) * const_total * df['noise_std']),
-             color='#b1182b', linestyle='--')
+             color='#b1182b', linestyle='--', label='$W_1$ Theoretical bound', linewidth=2)
     # W2
     plt.plot(df['noise_std'], df['noisy_vs_noisy_W2'], label='$W_2(\\mu_\\sigma, \\nu_\\sigma)$',
-             color='#2065ab')
+             color='#2065ab', linewidth=2)
     plt.plot(df['noise_std'], (d ** (1-0.5)) * (df['original_W1'] ** 0.5) + d * ((const_total * df['noise_std']) ** 0.5),
-             color='#2065ab', linestyle='--')
+             color='#2065ab', linestyle='--', label='$W_2$ Theoretical bound', linewidth=2)
     # W3
     plt.plot(df['noise_std'], df['noisy_vs_noisy_W3'], label='$W_3(\\mu_\\sigma, \\nu_\\sigma)$',
-             color='sandybrown')
+             color='sandybrown', linewidth=2)
     plt.plot(df['noise_std'], (d ** (1-1/3)) * (df['original_W1'] ** (1/3)) + d * ((const_total * df['noise_std']) ** (1/3)),
-             color='sandybrown', linestyle='--')
+             color='sandybrown', linestyle='--', label='$W_3$ Theoretical bound', linewidth=2)
 
     plt.xlabel('$\\sigma$')
     plt.xscale('log')
@@ -237,6 +254,11 @@ def plot_multiple_distance_ratios(
     with a shared x-axis and a single, common x-label.
     """
 
+    # Global style tweaks (optional)
+    plt.rcParams['axes.labelsize'] = 18   # default label font size
+    plt.rcParams['xtick.labelsize'] = 16  # x-tick font size
+    plt.rcParams['ytick.labelsize'] = 16  # y-tick font size
+
     # 1. Create subplots with shared x and y axes
     fig, axes = plt.subplots(
         nrows=1,
@@ -249,11 +271,11 @@ def plot_multiple_distance_ratios(
     for ax, df, title in zip(axes, results_dfs, subplot_titles):
 
         ax.plot(df['noise_std'], df['W1_ratio'],
-                label=r'$W_1$', color='#b1182b', alpha=0.7)
+                label=r'$W_1$', color='#b1182b', alpha=0.7, linewidth=3)
         ax.plot(df['noise_std'], df['W2_ratio'],
-                label=r'$W_2$', color='#2065ab', alpha=0.7)
+                label=r'$W_2$', color='#2065ab', alpha=0.7, linewidth=3)
         ax.plot(df['noise_std'], df['L2_ratio'],
-                label=r'$L_2$', color='sandybrown', alpha=0.7)
+                label=r'$L_2$', color='sandybrown', alpha=0.7, linewidth=3)
         ax.set_xlabel(r'$\sigma$', fontsize=16)
         ax.set_xlim(df['noise_std'].min(), df['noise_std'].max())
 
